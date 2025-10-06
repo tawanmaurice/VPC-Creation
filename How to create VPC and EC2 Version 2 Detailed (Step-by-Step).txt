@@ -1,0 +1,167 @@
+Version 2: Detailed (Step-by-Step)
+
+Open Google Sheets/Excel and create a diagram of the VPC with 3 public and 3 private subnets across 3 Availability Zones.
+
+VPC CIDR: 10.10.0.0/16
+
+Public: 10.10.1.0/24, 10.10.2.0/24, 10.10.3.0/24
+
+Private: 10.10.11.0/24, 10.10.12.0/24, 10.10.13.0/24
+
+Go to the AWS Console → search for VPC → click Create VPC and more.
+
+Enter:
+
+Name: Project1-VPC
+
+IPv4 CIDR block: 10.10.0.0/16
+
+Number of Availability Zones: 3
+
+Number of Public Subnets: 3
+
+Number of Private Subnets: 3
+
+Leave NAT Gateway unchecked unless you want private subnets to access the internet (extra cost).
+
+Review and click Create VPC.
+
+Verify that the VPC and subnets were created successfully in the console.
+
+(Optional) Create a NAT Gateway in one public subnet if private subnets need outbound internet access.
+
+Create Security Groups:
+
+SG-Public
+
+Inbound: ICMP (ping), HTTP (80), SSH (22)
+
+Outbound: leave default
+
+SG-Private
+
+Inbound: ICMP (from anywhere, for demo purposes)
+
+Outbound: leave default
+
+Launch an EC2 Instance:
+
+Name: Project1-EC2
+
+AMI: Amazon Linux 2023 (Kernel 6.1)
+
+Key Pair: optional
+
+Network: select Project1-VPC
+
+Subnet: choose one of the public subnets
+
+Auto-assign Public IP: Enable
+
+Security Group: choose SG-Public
+
+Under Advanced Settings → User Data, paste a script to install and start Apache:
+
+#!/bin/bash
+# Use this for your user data (script from top to bottom)
+# install httpd (Linux 2 version)
+yum update -y
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+
+# Get the IMDSv2 token
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+# Background the curl requests
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4 &> /tmp/local_ipv4 &
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone &> /tmp/az &
+curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/ &> /tmp/macid &
+wait
+
+macid=$(cat /tmp/macid)
+local_ipv4=$(cat /tmp/local_ipv4)
+az=$(cat /tmp/az)
+vpc=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/${macid}/vpc-id)
+
+echo "
+<!doctype html>
+<html lang=\"en\" class=\"h-100\">
+<head>
+<title>Details for EC2 instance</title>
+</head>
+<body>
+<div>
+<h1>AWS Instance Details</h1>
+<h1>Samurai Katana</h1>
+
+<br>
+# insert an image or GIF
+<img src="https://www.w3schools.com/images/w3schools_green.jpg" alt="W3Schools.com">
+<br>
+
+<p><b>Instance Name:</b> $(hostname -f) </p>
+<p><b>Instance Private Ip Address: </b> ${local_ipv4}</p>
+<p><b>Availability Zone: </b> ${az}</p>
+<p><b>Virtual Private Cloud (VPC):</b> ${vpc}</p>
+</div>
+</body>
+</html>
+" > /var/www/html/index.html
+
+# Clean up the temp files
+rm -f /tmp/local_ipv4 /tmp/az /tmp/macid
+
+
+
+Review settings and launch instance.
+
+Once running, copy the public IP address from the EC2 console.
+
+Open a browser and enter http://<your-public-ip> — you should see the Apache test page or your custom message.
+
+In order to break it down, you will need to do the following steps:
+
+
+
+Version 2: Tear Down Detailed (Step-by-Step)
+
+Terminate EC2 Instance
+
+Navigate to EC2 → Instances.
+
+Select your instance (e.g., Project1-EC2).
+
+Actions → Instance State → Terminate.
+
+Confirm termination. Wait until the state shows terminated.
+
+Optional: Delete NAT Gateway
+
+If you created a NAT Gateway, go to VPC → NAT Gateways.
+
+Select your NAT Gateway.
+
+Actions → Delete NAT Gateway.
+
+Confirm deletion.
+
+Release Elastic IP
+
+Go to EC2 → Elastic IPs.
+
+Select the Elastic IP associated with the NAT Gateway (or EC2 if you allocated one).
+
+Actions → Release Elastic IP.
+
+Confirm release to stop incurring charges.
+
+Delete VPC
+
+Go to VPC → Your VPCs.
+
+Select your custom VPC (Project1-VPC).
+
+Actions → Delete VPC.
+
+Confirm deletion. AWS will automatically remove any leftover resources tied to it.

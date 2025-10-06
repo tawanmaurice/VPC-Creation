@@ -1,0 +1,67 @@
+How to Create a VPC and EC2 Instance
+Version 1: Overview (Quick Guide)
+
+Phase 1: Plan in Google Sheets
+
+VPC CIDR: 10.10.0.0/16
+
+Public Subnets: 10.10.1.0/24, 10.10.2.0/24, 10.10.3.0/24
+
+Private Subnets: 10.10.11.0/24, 10.10.12.0/24, 10.10.13.0/24
+
+Spread across 3 Availability Zones
+
+Phase 2: Create VPC in AWS
+
+Go to VPC → Create VPC and more
+
+Name: Project1-VPC
+
+CIDR block: 10.10.0.0/16
+
+3 public and 3 private subnets across 3 AZs
+
+Phase 3: Networking Options
+
+Internet Gateway is created for public subnets
+
+Optional: NAT Gateway for private subnets (extra cost)
+
+Phase 4: Security Groups
+
+Public SG: Allow ICMP, HTTP, SSH
+
+Private SG: Allow ICMP (demo)
+
+Phase 5: Launch EC2
+
+Amazon Linux 2023 AMI
+
+Place in Project1-VPC, public subnet, with auto-assign public IP enabled
+
+Attach Public SG
+
+Add user data script for web server
+
+Launch and test by entering the public IP in your browser
+
+
+How to Tear Down a VPC and EC2 Instance
+
+Version 1: Overview (Quick Guide)
+
+Terminate EC2
+
+Go to EC2 → Instances → Terminate your instance.
+
+Optional: Delete NAT Gateway
+
+If you created a NAT Gateway, go to VPC → NAT Gateways → Delete.
+
+Release Elastic IP
+
+Go to EC2 → Elastic IPs → Release the one tied to the NAT Gateway.
+
+Delete VPC
+
+Go to VPC → Your VPCs → Delete your custom VPC.
